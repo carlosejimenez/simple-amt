@@ -26,8 +26,8 @@
     </style>
 </head>
 <body>
-<div class='container'>
-    <h2>Answer the question below for the image.</h2>
+<div class='container text-center'>
+    <h2 id="title">Answer the question below for the image.</h2>
 </div>
 
 <div class='container-fluid'>
@@ -41,18 +41,23 @@
                 PLACEHOLDER
             </h4>
             <br/>
-            <p>Answer:</p>
-            <div>
-                <input type="radio" name="answer" value="yes">
-                <label for="yes">yes (1)</label>
-            </div>
-            <div>
-                <input type="radio" name="answer" value="no">
-                <label for="no">no (2)</label>
-            </div>
-            <div>
-                <input type="radio" name="answer" value="ambiguous">
-                <label for="ambiguous">ambiguous (3)</label>
+            <div id="radio-pane">
+                <div id="radio-buttons">
+                    <p>Answer:</p>
+                    <div>
+                        <input type="radio" name="answer" value="yes">
+                        <label for="yes">yes (1)</label>
+                    </div>
+                    <div>
+                        <input type="radio" name="answer" value="no">
+                        <label for="no">no (2)</label>
+                    </div>
+                    <div>
+                        <input type="radio" name="answer" value="ambiguous">
+                        <label for="ambiguous">ambiguous (3)</label>
+                    </div>
+                </div>
+                <button type="button" id='start-button' class='btn btn-primary btn-lg'>Start</button>
             </div>
         </div>
         <div class='text-center' id='button-div'>
@@ -89,10 +94,10 @@
             // If this is a HIT on AMT, then replace the default input with the real input.
             args_input = simpleamt.getInput(DEFAULT_INPUT);
 
-            // Enable the UI if the HIT is not in preview mode.
-            if (!simpleamt.isPreview()) {
-                enable_hit();
-            }
+            // // Enable the UI if the HIT is not in preview mode.
+            // if (!simpleamt.isPreview()) {
+            //     enable_hit();
+            // }
 
             // Set up the descriptions.
             _.each(args_input, function () {
@@ -107,9 +112,45 @@
                     console.log('loaded image from ' + question.img_url);
                 };
                 img.src = question.img_url;
-                question_header.innerText = question.sentence;
             });
 
+            // Enable components
+            $('#start-button').click(function () {
+                start_task()
+            });
+            // render();
+            instruction_view();
+        }
+
+        function instruction_view() {
+            question_header.innerText = "Instructions:\n" +
+                "This task contains 20 images, each with a simple yes/no question.\n" +
+                "Please answer each question to the best of your ability. Answer \"ambiguous\" " +
+                "if you think the question does not have an obvious answer.\n\n" +
+                "The following hotkeys are enabled:\n" +
+                "\t (1) for yes\n" +
+                "\t (2) for no\n" +
+                "\t (3) for ambiguous\n" +
+                "\t enter/return to submit\n\n" +
+                "PLEASE NOTE: Some questions have been pre-checked for obviousness. If your answer " +
+                "to these questions are not correct, you will not be allowed to submit until they've " +
+                "been corrected. Please answer each image question carefully. Thanks!";
+            $('#button-div').hide();
+            $('#radio-buttons').hide();
+            $('#submit-btn').hide();
+            $('#title').hide();
+            $('#start-button').show();
+        }
+
+        function start_task() {
+            $('#start-button').hide();
+            $('#title').show();
+            $('#radio-buttons').show();
+            $('#submit-btn').show();
+            // Enable the UI if the HIT is not in preview mode.
+            if (!simpleamt.isPreview()) {
+                enable_hit();
+            }
             render();
         }
 
@@ -140,7 +181,7 @@
                 if (idx < args_input.length - 1) next_btn.prop('disabled', false);
             }
 
-            set_buttons()
+            set_buttons();
         }
 
         // Update the index, and save the text in the text area.
@@ -169,6 +210,22 @@
             }
         }
 
+        // Check each answer. If the answer is a verified question (in vqa) if the answer's incorrect
+        // return false.
+        function check_verified_answers() {
+            for (const num of Array(descriptions.length).keys()) {
+                if (args_input[num].vqa){
+                    var pred = descriptions[num];
+                    var answer = args_input[num].answer;
+                    if (pred != answer){
+                        return false;
+                    }
+                }
+
+            }
+            return true;
+        }
+
         // Enable the UI.
         function enable_hit() {
             enabled = true;
@@ -190,7 +247,13 @@
                 if (_.any(descriptions, function (d) {
                     return !d;
                 })) {
-                    alert('Please select an answer for every question. Choose ambiguous, if the question is not answerable.');
+                    alert('Please select an answer for every question. ' +
+                        'Choose ambiguous if the question is not answerable.');
+                    return false;
+                }
+                if (!check_verified_answers()) {
+                    alert('One of your answers to the pre-checked questions is wrong. ' +
+                        'Please check your answers before submitting again.');
                     return false;
                 }
                 var output = _.map(_.zip(args_input, descriptions), function (x) {
@@ -207,27 +270,43 @@
 
         // set up hotkeys
         hotkeys('1', function () {
-            $('input[name=answer][value=yes]').prop('checked', true).trigger('click');
+            if (enabled) {
+                $('input[name=answer][value=yes]').prop('checked', true).trigger('click');
+            }
             return false;
         });
         hotkeys('2', function () {
-            $('input[name=answer][value=no]').prop('checked', true).trigger('click');
+            if (enabled) {
+                $('input[name=answer][value=no]').prop('checked', true).trigger('click');
+            }
             return false;
         });
         hotkeys('3', function () {
-            $('input[name=answer][value=ambiguous]').prop('checked', true).trigger('click');
+            if (enabled) {
+
+                $('input[name=answer][value=ambiguous]').prop('checked', true).trigger('click');
+            }
             return false;
         });
         hotkeys('left', function () {
-            set_idx(idx - 1);
+            if (enabled) {
+
+                set_idx(idx - 1);
+            }
             return false;
         });
         hotkeys('right', function () {
-            set_idx(idx + 1);
+            if (enabled) {
+
+                set_idx(idx + 1);
+            }
             return false;
         });
         hotkeys('return,enter', function () {
-            $('#submit-btn').trigger('click');
+            if (enabled) {
+
+                $('#submit-btn').trigger('click');
+            }
             return false;
         });
 
