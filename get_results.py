@@ -20,6 +20,7 @@ def process_assignments(mtc, hit_id, status):
             'worker_id': a['WorkerId'],
             'output': answer,
             'submit_time': str(a['SubmitTime']),
+            'task_duration': (a['SubmitTime'] - a['AcceptTime']).seconds,
           })
   except mtc.exceptions.RequestError:
     print('Bad hit_id %s' % str(hit_id), file=sys.stderr)

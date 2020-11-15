@@ -1,0 +1,11 @@
+{
+  "Title": "Answer Questions about Images",
+  "Description": "Answer a question about an image.",
+  "Keywords": "image,images,sentence,classify,classification,research,qa",
+  "Reward": 0.05,
+  "LifetimeInSeconds": 604800,
+  "AssignmentDurationInSeconds": 600,
+  "FrameHeight": 15000,
+  "MaxAssignments": 1,
+  "Country": ["US", "AU", "NZ", "GB", "CA"]
+}

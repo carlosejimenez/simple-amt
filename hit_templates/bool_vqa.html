@@ -1,0 +1,238 @@
+<html>
+<head>
+    <title>Answer the question below for the image</title>
+    <!-- simpleamt depends on these libraries -->
+    <script src='//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
+    <script src='//cdnjs.cloudflare.com/ajax/libs/json3/3.3.2/json3.min.js'></script>
+    <!-- end of required libraries -->
+    <script src='//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js'></script>
+    <script src='//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.6.0/underscore-min.js'></script>
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/hotkeys-js/dist/hotkeys.min.js"></script>
+    <style>
+        #button-div {
+            margin-bottom: 10px;
+        }
+
+        #counter {
+            margin: 0 10px;
+            font-size: 20pt;
+            font-weight: bold;
+        }
+
+        img {
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+<div class='container'>
+    <h2>Answer the question below for the image.</h2>
+</div>
+
+<div class='container-fluid'>
+    <div class='row'>
+        <div class='col-xs-6'>
+            <div id='image-container'>
+            </div>
+        </div>
+        <div class='col-xs-6'>
+            <h4 id='question_header'>
+                PLACEHOLDER
+            </h4>
+            <br/>
+            <p>Answer:</p>
+            <div>
+                <input type="radio" name="answer" value="yes">
+                <label for="yes">yes (1)</label>
+            </div>
+            <div>
+                <input type="radio" name="answer" value="no">
+                <label for="no">no (2)</label>
+            </div>
+            <div>
+                <input type="radio" name="answer" value="ambiguous">
+                <label for="ambiguous">ambiguous (3)</label>
+            </div>
+        </div>
+        <div class='text-center' id='button-div'>
+            <button id='prev-btn' class='btn btn-lg btn-primary' disabled>Back (left)</button>
+            <span id='counter'>
+            <span class='counter-top'></span> / <span class='counter-bottom'></span>
+          </span>
+            <button id='next-btn' class='btn btn-lg btn-primary' disabled>Next (right)</button>
+        </div>
+    </div>
+</div>
+
+{% include "hit_templates/simpleamt.html" %}
+
+<script>
+    $(function () {
+
+        // Define some default input.
+        var DEFAULT_INPUT = [
+            'https://live.staticflickr.com/3575/3365647249_5f442f56e8_b.jpg',
+            'https://live.staticflickr.com/4617/40150983442_5fc1afe90f_b.jpg',
+        ];
+
+        var args_input = null;
+
+        // Descriptions of images, parallel to input.
+        var descriptions = [];
+
+        // Some variables to track state of the HIT.
+        var idx = 0;
+        var enabled = false;
+
+        function main() {
+            // If this is a HIT on AMT, then replace the default input with the real input.
+            args_input = simpleamt.getInput(DEFAULT_INPUT);
+
+            // Enable the UI if the HIT is not in preview mode.
+            if (!simpleamt.isPreview()) {
+                enable_hit();
+            }
+
+            // Set up the descriptions.
+            _.each(args_input, function () {
+                descriptions.push('');
+            });
+
+            // Preload all images
+            var imgs = [];
+            _.each(args_input, function (question) {
+                var img = new Image();
+                img.onload = function () {
+                    console.log('loaded image from ' + question.img_url);
+                };
+                img.src = question.img_url;
+                question_header.innerText = question.sentence;
+            });
+
+            render();
+        }
+
+        // Use the current index to update the image and description
+        function render() {
+            // Set up the image
+            $('#image-container').empty();
+            $('<img>').attr('src', args_input[idx].img_url).appendTo($('#image-container'));
+            question_header.innerText = args_input[idx].sentence;
+
+            // Deselect all answer buttons
+            $('input[name=answer]').attr('checked', false);
+
+            // Refresh the counter
+            $('.counter-top').text(idx + 1);
+            $('.counter-bottom').text(args_input.length);
+
+            // If the UI is enabled, enable or disable the buttons depending on
+            // the index.
+            if (enabled) {
+                var prev_btn = $('#prev-btn');
+                var next_btn = $('#next-btn');
+                prev_btn.prop('disabled', true);
+                next_btn.prop('disabled', true);
+                if (idx > 0) {
+                    prev_btn.prop('disabled', false);
+                }
+                if (idx < args_input.length - 1) next_btn.prop('disabled', false);
+            }
+
+            set_buttons()
+        }
+
+        // Update the index, and save the text in the text area.
+        function set_idx(new_idx) {
+            if (new_idx < 0 || new_idx >= args_input.length) return;
+            descriptions[idx] = $('input[name=answer]:checked').val();
+
+            idx = new_idx;
+            render();
+        }
+
+        // fill radio buttons
+        function set_buttons() {
+            var val = descriptions[idx];
+
+            // I realize this looks bad, but string interpolation wasn't working for me here.
+            if (val == 'yes') {
+                $('input[name=answer][value=yes]').prop('checked', true).trigger('click');
+            } else if (val == 'no') {
+                $('input[name=answer][value=no]').prop('checked', true).trigger('click');
+            } else if (val == 'ambiguous') {
+                $('input[name=answer][value=ambiguous]').prop('checked', true).trigger('click');
+            } else {
+                // Deselect all answer buttons
+                $('input[name=answer]').attr('checked', false);
+            }
+        }
+
+        // Enable the UI.
+        function enable_hit() {
+            enabled = true;
+
+            // Enable components
+            $('#next-btn').click(function () {
+                set_idx(idx + 1)
+            });
+            $('#prev-btn').click(function () {
+                set_idx(idx - 1)
+            });
+            $('#text-area').prop('disabled', false);
+            $('#submit-btn').prop('disabled', false);
+
+            // Set up submit handler.
+            simpleamt.setupSubmit();
+            $('#submit-btn').click(function () {
+                descriptions[idx] = $('input[name=answer]:checked').val();
+                if (_.any(descriptions, function (d) {
+                    return !d;
+                })) {
+                    alert('Please select an answer for every question. Choose ambiguous, if the question is not answerable.');
+                    return false;
+                }
+                var output = _.map(_.zip(args_input, descriptions), function (x) {
+                    return {
+                        'image_url': x[0].img_url,
+                        'question_id': x[0].question_id,
+                        'question': x[0].sentence,
+                        'description': x[1]
+                    };
+                });
+                simpleamt.setOutput(output);
+            });
+        }
+
+        // set up hotkeys
+        hotkeys('1', function () {
+            $('input[name=answer][value=yes]').prop('checked', true).trigger('click');
+            return false;
+        });
+        hotkeys('2', function () {
+            $('input[name=answer][value=no]').prop('checked', true).trigger('click');
+            return false;
+        });
+        hotkeys('3', function () {
+            $('input[name=answer][value=ambiguous]').prop('checked', true).trigger('click');
+            return false;
+        });
+        hotkeys('left', function () {
+            set_idx(idx - 1);
+            return false;
+        });
+        hotkeys('right', function () {
+            set_idx(idx + 1);
+            return false;
+        });
+        hotkeys('return,enter', function () {
+            $('#submit-btn').trigger('click');
+            return false;
+        });
+
+        main();
+    });
+</script>
+</body>
+</html>

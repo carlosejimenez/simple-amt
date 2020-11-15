@@ -1,0 +1,11 @@
+{
+  "Title": "Verify Image Descriptions",
+  "Description": "Verify if a given description matches an image.",
+  "Keywords": "image,images,sentence,classify,classification,research",
+  "Reward": 0.05,
+  "LifetimeInSeconds": 604800,
+  "AssignmentDurationInSeconds": 1000,
+  "FrameHeight": 20000,
+  "MaxAssignments": 4,
+  "Country": ["US", "AU", "NZ", "GB", "CA"]
+}
